@@ -1,0 +1,82 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  
+  cloud:
+    gateway:
+      # Configuration globale CORS
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: false
+      
+      # Routes vers les microservices
+      routes:
+        # Route vers ProxyFHIR
+        - id: proxy-fhir
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/fhir/**
+          filters:
+            - RewritePath=/api/v1/fhir/(?<segment>.*), /api/v1/fhir/${segment}
+        
+        # Route vers DeID
+        - id: deid-service
+          uri: http://localhost:5000
+          predicates:
+            - Path=/api/v1/deid/**
+          filters:
+            - RewritePath=/api/v1/deid/(?<segment>.*), /api/v1/${segment}
+        
+        # Route vers Featurizer
+        - id: featurizer-service
+          uri: http://localhost:5001
+          predicates:
+            - Path=/api/v1/features/**
+          filters:
+            - RewritePath=/api/v1/features/(?<segment>.*), /api/v1/${segment}
+        
+        # Route vers ML Predictor
+        - id: ml-predictor-service
+          uri: http://localhost:5002
+          predicates:
+            - Path=/api/v1/predictions/**
+          filters:
+            - RewritePath=/api/v1/predictions/(?<segment>.*), /api/v1/${segment}
+        
+        # Route pour health check global
+        - id: gateway-health
+          uri: http://localhost:8080
+          predicates:
+            - Path=/health
+          filters:
+            - SetStatus=200
+
+# Configuration Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

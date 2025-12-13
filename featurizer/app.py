@@ -1,0 +1,36 @@
+from flask import Flask
+from flask_cors import CORS
+from config import config
+from routes.feature_routes import feature_bp
+import logging
+
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def create_app(config_name='development'):
+    """Factory pour créer l'application Flask"""
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    
+    # CORS
+    # CORS(app)
+    
+    # Enregistrer les blueprints
+    app.register_blueprint(feature_bp, url_prefix='/api/v1')
+    
+    logger.info("Featurizer microservice started successfully")
+    
+    return app
+
+if __name__ == '__main__':
+    app = create_app('development')
+    app.run(
+        host='0.0.0.0',
+        port=app.config['PORT'],
+        debug=app.config['DEBUG']
+    )
+ 
