@@ -13,6 +13,9 @@ import {
   Chip,
   Skeleton,
   Alert,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
 } from '@mui/material';
 import { Search, FilterList, SortByAlpha } from '@mui/icons-material';
 import PatientCard from './PatientCard';
@@ -27,6 +30,12 @@ export default function PatientList() {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [riskFilter, setRiskFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [ageRange, setAgeRange] = useState([0, 120]);
+  const [nlpFilters, setNlpFilters] = useState({
+    diabetes: false,
+    hypertension: false,
+  });
   const [sortBy, setSortBy] = useState('risk_desc');
 
   useEffect(() => {
@@ -55,30 +64,45 @@ export default function PatientList() {
         searchTerm === '' ||
         patient.patient_id?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Risk level filter
-      const getRiskLevel = (score) => {
-        if (score >= 0.8) return 'critical';
-        if (score >= 0.6) return 'high';
-        if (score >= 0.4) return 'moderate';
-        if (score >= 0.2) return 'low';
+      // Risk level filter (using Framingham score 1-20)
+      const getRiskLevelFromFramingham = (score) => {
+        if (score >= 13) return 'critical';
+        if (score >= 9) return 'high';
+        if (score >= 5) return 'moderate';
+        if (score >= 1) return 'low';
         return 'minimal';
       };
 
-      const patientRisk = getRiskLevel(patient.risk_score);
+      const framinghamScore = patient.framingham_score || patient.risk_score || 0;
+      const patientRisk = patient.risk_level || getRiskLevelFromFramingham(framinghamScore);
       const matchesRisk = riskFilter === 'all' || patientRisk === riskFilter;
 
-      return matchesSearch && matchesRisk;
+      // Gender filter
+      const matchesGender = genderFilter === 'all' || patient.gender === genderFilter;
+
+      // Age range filter
+      const matchesAge = patient.age >= ageRange[0] && patient.age <= ageRange[1];
+
+      // NLP condition filters
+      const matchesDiabetes = !nlpFilters.diabetes || patient.nlp_has_diabetes === 1;
+      const matchesHypertension = !nlpFilters.hypertension || patient.nlp_has_hypertension === 1;
+
+      return matchesSearch && matchesRisk && matchesGender && matchesAge && matchesDiabetes && matchesHypertension;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'risk_desc':
-          return (b.risk_score || 0) - (a.risk_score || 0);
+          return (b.framingham_score || b.risk_score || 0) - (a.framingham_score || a.risk_score || 0);
         case 'risk_asc':
-          return (a.risk_score || 0) - (b.risk_score || 0);
+          return (a.framingham_score || a.risk_score || 0) - (b.framingham_score || b.risk_score || 0);
         case 'age_desc':
           return (b.age || 0) - (a.age || 0);
         case 'age_asc':
           return (a.age || 0) - (b.age || 0);
+        case 'bmi_desc':
+          return (b.bmi || 0) - (a.bmi || 0);
+        case 'bmi_asc':
+          return (a.bmi || 0) - (b.bmi || 0);
         default:
           return 0;
       }
@@ -94,7 +118,7 @@ export default function PatientList() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, riskFilter, sortBy]);
+  }, [searchTerm, riskFilter, genderFilter, ageRange, nlpFilters, sortBy]);
 
   if (loading) {
     return (
@@ -180,6 +204,20 @@ export default function PatientList() {
               </Select>
             </FormControl>
           </Grid>
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Gender</InputLabel>
+              <Select
+                value={genderFilter}
+                label="Gender"
+                onChange={(e) => setGenderFilter(e.target.value)}
+              >
+                <MenuItem value="all">All Genders</MenuItem>
+                <MenuItem value="male">Male</MenuItem>
+                <MenuItem value="female">Female</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth size="small">
               <InputLabel>Sort By</InputLabel>
@@ -197,10 +235,58 @@ export default function PatientList() {
                 <MenuItem value="risk_asc">Risk (Low to High)</MenuItem>
                 <MenuItem value="age_desc">Age (Oldest First)</MenuItem>
                 <MenuItem value="age_asc">Age (Youngest First)</MenuItem>
+                <MenuItem value="bmi_desc">BMI (High to Low)</MenuItem>
+                <MenuItem value="bmi_asc">BMI (Low to High)</MenuItem>
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={2}>
+
+          {/* Second Row - Age Range and NLP Filters */}
+          <Grid item xs={12} md={3}>
+            <Box display="flex" gap={1}>
+              <TextField
+                size="small"
+                label="Min Age"
+                type="number"
+                value={ageRange[0]}
+                onChange={(e) => setAgeRange([parseInt(e.target.value) || 0, ageRange[1]])}
+                inputProps={{ min: 0, max: 120 }}
+              />
+              <TextField
+                size="small"
+                label="Max Age"
+                type="number"
+                value={ageRange[1]}
+                onChange={(e) => setAgeRange([ageRange[0], parseInt(e.target.value) || 120])}
+                inputProps={{ min: 0, max: 120 }}
+              />
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <FormGroup row>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={nlpFilters.diabetes}
+                    onChange={(e) => setNlpFilters({ ...nlpFilters, diabetes: e.target.checked })}
+                    size="small"
+                  />
+                }
+                label={<Typography variant="body2">Has Diabetes</Typography>}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={nlpFilters.hypertension}
+                    onChange={(e) => setNlpFilters({ ...nlpFilters, hypertension: e.target.checked })}
+                    size="small"
+                  />
+                }
+                label={<Typography variant="body2">Has Hypertension</Typography>}
+              />
+            </FormGroup>
+          </Grid>
+          <Grid item xs={12} md={5}>
             <Box display="flex" gap={0.5} flexWrap="wrap">
               {riskFilter !== 'all' && (
                 <Chip

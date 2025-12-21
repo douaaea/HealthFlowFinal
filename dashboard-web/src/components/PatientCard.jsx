@@ -44,10 +44,19 @@ export default function PatientCard({ patient, onClick }) {
   const riskConfig = getRiskConfig(riskLevel);
 
   const vitalSigns = [
-    { label: 'Heart Rate', value: patient.vit_heart_rate, unit: 'bpm', icon: Favorite },
-    { label: 'BP Systolic', value: patient.vit_bp_systolic, unit: 'mmHg', icon: Speed },
-    { label: 'Temperature', value: patient.vit_temperature, unit: '°F', icon: Thermostat },
-    { label: 'BMI', value: patient.bmi, unit: '', icon: Person },
+    { label: 'Heart Rate', value: patient.vit_heart_rate, unit: 'bpm', icon: Favorite, color: '#E74C3C' },
+    { label: 'BMI', value: patient.bmi, unit: '', icon: Person, color: '#3498DB' },
+  ].filter(v => v.value !== undefined && v.value !== null);
+
+  const labResults = [
+    { label: 'Total Cholesterol', value: patient.avg_cholesterol, unit: 'mg/dL', normal: '< 200' },
+    { label: 'HDL', value: patient.avg_hdl, unit: 'mg/dL', normal: '> 40' },
+    { label: 'LDL', value: patient.avg_ldl, unit: 'mg/dL', normal: '< 100' },
+  ].filter(v => v.value !== undefined && v.value !== null);
+
+  const physicalMetrics = [
+    { label: 'Weight', value: patient.weight_kg, unit: 'kg' },
+    { label: 'Height', value: patient.height_cm, unit: 'cm' },
   ].filter(v => v.value !== undefined && v.value !== null);
 
   const nlpFeatures = {
@@ -138,21 +147,22 @@ export default function PatientCard({ patient, onClick }) {
         {/* Vital Signs */}
         {vitalSigns.length > 0 && (
           <Grid container spacing={1} sx={{ mb: 2 }}>
-            {vitalSigns.slice(0, 4).map((vital) => {
+            {vitalSigns.map((vital) => {
               const Icon = vital.icon;
               return (
                 <Grid item xs={6} key={vital.label}>
                   <Box
                     sx={{
-                      p: 1,
-                      borderRadius: 1,
-                      backgroundColor: 'grey.50',
+                      p: 1.5,
+                      borderRadius: 2,
+                      backgroundColor: `${vital.color}10`,
+                      border: `1px solid ${vital.color}30`,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
                     }}
                   >
-                    <Icon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Icon sx={{ fontSize: 20, color: vital.color }} />
                     <Box>
                       <Typography variant="caption" color="text.secondary" display="block">
                         {vital.label}
@@ -166,6 +176,65 @@ export default function PatientCard({ patient, onClick }) {
                 </Grid>
               );
             })}
+          </Grid>
+        )}
+
+        {/* Lab Results */}
+        {labResults.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={1}>
+              Lab Results
+            </Typography>
+            <Grid container spacing={1}>
+              {labResults.map((lab) => (
+                <Grid item xs={4} key={lab.label}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: 1.5,
+                      backgroundColor: 'grey.50',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {lab.label}
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {typeof lab.value === 'number' ? lab.value.toFixed(0) : lab.value}
+                    </Typography>
+                    <Typography variant="caption" color="success.main" display="block">
+                      {lab.normal}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Physical Metrics */}
+        {physicalMetrics.length > 0 && (
+          <Grid container spacing={1} sx={{ mb: 2 }}>
+            {physicalMetrics.map((metric) => (
+              <Grid item xs={6} key={metric.label}>
+                <Box
+                  sx={{
+                    p: 1,
+                    borderRadius: 1.5,
+                    backgroundColor: 'grey.50',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {metric.label}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {typeof metric.value === 'number' ? metric.value.toFixed(1) : metric.value}
+                    {metric.unit && <span style={{ fontWeight: 400, marginLeft: 2 }}>{metric.unit}</span>}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
           </Grid>
         )}
 
@@ -242,6 +311,38 @@ export default function PatientCard({ patient, onClick }) {
                     />
                   )}
                 </Box>
+
+                {/* Risk Factors */}
+                {patient.risk_factors && patient.risk_factors.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.5}>
+                      Risk Factors
+                    </Typography>
+                    {patient.risk_factors.slice(0, 3).map((factor, idx) => (
+                      <Box key={idx} sx={{ mb: 0.5 }}>
+                        <Typography variant="caption" color="error.main">
+                          • {factor.factor}: {typeof factor.value === 'number' ? factor.value.toFixed(1) : factor.value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+
+                {/* Top Recommendations */}
+                {patient.recommendations && patient.recommendations.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={600} display="block" mb={0.5}>
+                      Recommendations
+                    </Typography>
+                    {patient.recommendations.slice(0, 2).map((rec, idx) => (
+                      <Box key={idx} sx={{ mb: 0.5 }}>
+                        <Typography variant="caption" color="primary.main">
+                          • {rec.action}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
               </Box>
             </Collapse>
           </>
