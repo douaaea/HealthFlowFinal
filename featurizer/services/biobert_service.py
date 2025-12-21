@@ -28,8 +28,10 @@ class BioBERTService:
             # Enable MPS acceleration on Apple Silicon (2-5x speedup)
             # Falls back to CPU if MPS not available
             device = 0 if torch.backends.mps.is_available() else -1
-            device_name = "MPS (Apple Silicon)" if device == 0 else "CPU"
-            logger.info(f"Using device: {device_name}")
+            if device == 0:
+                logger.info("Using device: MPS (Apple Silicon)")
+            else:
+                logger.info("Using device: CPU")
 
             self.ner_pipeline = pipeline(
                 "ner",

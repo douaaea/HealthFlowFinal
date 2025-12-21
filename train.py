@@ -208,8 +208,8 @@ print(f"✅ Features finales: {df.shape[1]-1}")
 
 
 # %%
-# CELL 12: Train/Test Split
-print("✂️ === SÉPARATION TRAIN/TEST ===\n")
+# CELL 12: Train/Val/Test Split (60/20/20)
+print("✂️ === SÉPARATION TRAIN/VAL/TEST ===\n")
 
 if TARGET_COL not in df.columns:
     raise ValueError(f"❌ Erreur : La colonne '{TARGET_COL}' est absente !")
@@ -219,12 +219,19 @@ y = df[TARGET_COL]
 
 print(f"📊 Features: {X.shape[1]}, Samples: {X.shape[0]}")
 
-X_train, X_test, y_train, y_test = train_test_split(
+# First split: 80% train+val, 20% test
+X_temp, X_test, y_temp, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-print(f"✅ Train: {X_train.shape[0]} | Test: {X_test.shape[0]}")
+# Second split: 75% of temp (60% total) train, 25% of temp (20% total) val
+X_train, X_val, y_train, y_val = train_test_split(
+    X_temp, y_temp, test_size=0.25, random_state=42, stratify=y_temp
+)
+
+print(f"✅ Train: {X_train.shape[0]} | Val: {X_val.shape[0]} | Test: {X_test.shape[0]}")
 print(f"📊 Train distribution:\n{y_train.value_counts(normalize=True).round(3)}")
+print(f"📊 Val distribution:\n{y_val.value_counts(normalize=True).round(3)}")
 
 
 # %%
@@ -244,31 +251,30 @@ model = xgb.XGBClassifier(
     tree_method="hist",
     n_estimators=500,
     learning_rate=0.03,
-    max_depth=4,
-    subsample=0.8,
-    colsample_bytree=0.8,
+    max_depth=4,              # Reduced from 6 to prevent overfitting
+    subsample=0.7,            # Reduced from 0.8 for more regularization
+    colsample_bytree=0.7,     # Reduced from 0.8 for more regularization
     objective='binary:logistic',
     eval_metric='auc',
     early_stopping_rounds=50,
-    missing=float('nan'),  # Gère les NaN automatiquement
-    reg_alpha=1.0,        # L1 regularization (default: 0)
-    reg_lambda=3.0,       # L2 regularization (default: 1)
-    gamma=1.0,            # Minimum loss reduction for split (default: 0)
-    min_child_weight=5   # Minimum sum of instance weight in child (default: 1)
-           # Reduce from 6 to 4
+    missing=float('nan'),
+    reg_alpha=1.0,            # L1 regularization
+    reg_lambda=5.0,           # L2 regularization (increased for better generalization)
+    gamma=0.5,                # Minimum loss reduction (higher = more conservative)
+    min_child_weight=5        # Minimum sum of instance weight (prevents small leaves)
 )
 
 print("✅ Modèle configuré!")
 
 
 # %%
-# CELL 13: Training WITH Train/Test Tracking (FIXED)
-print("🔥 === ENTRAÎNEMENT Train/Test tracking ===\n")
+# CELL 13: Training WITH Train/Val/Test Tracking
+print("🔥 === ENTRAÎNEMENT Train/Val/Test tracking ===\n")
 start_train = time.time()
 
 model.fit(
     X_train, y_train,
-    eval_set=[(X_train, y_train), (X_test, y_test)],  # Train first, Test second
+    eval_set=[(X_train, y_train), (X_val, y_val)],  # Use validation set for early stopping
     verbose=100
 )
 

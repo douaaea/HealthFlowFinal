@@ -117,9 +117,34 @@ HealthFlow detects **real 30-day readmissions** from Synthea data using SQL wind
 
 See [`scripts/02_detect_readmissions.sql`](scripts/02_detect_readmissions.sql) for implementation.
 
+## 🏆 Model Performance
+
+**XGBoost Readmission Predictor** trained on 3,607 patients with real 30-day readmissions:
+
+### **Metrics**
+
+- **Test Accuracy**: 81.58%
+- **ROC-AUC**: 88.27%
+- **Precision**: 82% (No Readmission), 80% (Readmission)
+- **Recall**: 86% (No Readmission), 76% (Readmission)
+
+### **Dataset**
+
+- **3,607 patients** from Synthea
+- **1,571 real readmissions** (43.55% rate)
+- **51 features**: 37 structured + 14 NLP (BioBERT hybrid)
+- **292,576 clinical notes** analyzed
+
+### **Training Details**
+
+- 313 iterations, best at 262
+- Train AUC: 94.38%, Test AUC: 88.14%
+- Minimal overfitting (gap: 6.24%)
+- Training time: ~16 seconds
+
 ## 📝 Data Pipeline
 
-### Complete Workflow (with Real Readmissions + BioBERT NLP)
+### Complete Workflow (Pure SQL - Ultra-Fast!)
 
 **Note**: All dataset filenames are **fixed** - no need to update `train.py`!
 
@@ -132,17 +157,17 @@ cd scripts
 python3 load_synthea_to_db_parallel.py synthea_output/fhir
 # Alternative (sequential): python3 load_synthea_to_db.py synthea_output/fhir
 
-# 3. Extract FHIR bundles to relational tables
+# 3. Extract ALL FHIR resources to relational tables (100% SQL!)
 export PGPASSWORD='qwerty'
-psql -h localhost -p 5433 -U postgres -d healthflow_fhir -f 01_extract_fhir_to_relational.sql
+psql -h localhost -p 5433 -U postgres -d healthflow_fhir -f extract_all_fhir_resources.sql
+# → Creates: raw_observations, raw_conditions, raw_medications (2M+ records in seconds!)
 
-# 4. Detect REAL readmissions (30-day window)
-psql -h localhost -p 5433 -U postgres -d healthflow_fhir -f 02_detect_readmissions.sql
-# Output: ~33% readmission rate (realistic for Synthea)
+# 4. Build complete dataset with readmissions (100% SQL - ultra-fast!)
+psql -h localhost -p 5433 -U postgres -d healthflow_fhir -f build_dataset_pure_sql.sql
+# → Creates dataset_final with 35 structured features + readmission labels
 
-# 5. Export structured features from PostgreSQL
-python3 export_structured_features.py
-# → dataset_structured.csv (35 features)
+# 5. Export to CSV
+psql -h localhost -p 5433 -U postgres -d healthflow_fhir -c "\COPY dataset_final TO '../dataset_structured.csv' CSV HEADER"
 
 # 6. Extract NLP features using BioBERT Hybrid (OpenMed + Keywords)
 python3 extract_biobert_features.py
