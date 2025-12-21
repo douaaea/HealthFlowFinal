@@ -20,6 +20,7 @@ import HealthStatus from './components/HealthStatus';
 import Pipeline from './components/Pipeline';
 import RiskAnalytics from './components/RiskAnalytics';
 import NLPInsights from './components/NLPInsights';
+import AuditFairness from './components/AuditFairness';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -144,6 +145,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/patients" element={<PatientList />} />
               <Route path="/analytics" element={<RiskAnalytics />} />
+              <Route path="/audit-fairness" element={<AuditFairness />} />
               <Route path="/nlp" element={<NLPInsights />} />
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/health" element={<HealthStatus />} />

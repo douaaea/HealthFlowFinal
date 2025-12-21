@@ -25,6 +25,7 @@ import {
     Menu as MenuIcon,
     ChevronLeft,
     LocalHospital,
+    Gavel,
 } from '@mui/icons-material';
 
 const SIDEBAR_WIDTH = 280;
@@ -33,6 +34,7 @@ const MENU_ITEMS = [
     { path: '/', label: 'Dashboard', icon: Dashboard, description: 'Overview & Stats' },
     { path: '/patients', label: 'Patients', icon: People, description: 'Patient Records' },
     { path: '/analytics', label: 'Risk Analytics', icon: Analytics, description: 'Risk Analysis' },
+    { path: '/audit-fairness', label: 'Audit Fairness', icon: Gavel, description: 'AI Bias & Fairness' },
     { path: '/nlp', label: 'NLP Insights', icon: Psychology, description: 'Clinical Notes AI' },
     { path: '/pipeline', label: 'Data Pipeline', icon: Science, description: 'Process Data' },
     { path: '/health', label: 'System Health', icon: HealthAndSafety, description: 'Service Status' },

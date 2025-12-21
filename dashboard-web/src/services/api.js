@@ -46,6 +46,7 @@ export const clearCache = () => {
 // Health checks for all services
 export const checkAllServicesHealth = async () => {
   const services = [
+    { name: 'ProxyFHIR', port: 8081, path: '/api/v1/actuator/health' },
     { name: 'DeID', port: 5000, path: '/health' },
     { name: 'Featurizer', port: 5001, path: '/health' },
     { name: 'ML-Predictor', port: 5002, path: '/health' },
