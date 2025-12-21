@@ -11,7 +11,7 @@ class Config:
     DB_PORT = os.getenv('DB_PORT', '5433')
     DB_NAME = os.getenv('DB_NAME', 'healthflow_fhir')
     DB_USER = os.getenv('DB_USER', 'postgres')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', 'postgres')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', 'qwerty')
     
     # URI SQLAlchemy
     SQLALCHEMY_DATABASE_URI = (

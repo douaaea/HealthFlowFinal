@@ -17,10 +17,13 @@ def create_app(config_name='development'):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     
-    # CORS
-    # CORS(app)
-    
+    # CORS - Allow all origins for all routes (including /health)
+    CORS(app, resources={r"/*": {"origins": "*"}})
+
     # Enregistrer les blueprints
+    from routes.health_routes import health_bp
+
+    app.register_blueprint(health_bp)
     app.register_blueprint(anonymization_bp, url_prefix='/api/v1')
     
     # Créer les tables si nécessaire
