@@ -27,8 +27,20 @@ import RiskBadge, { getRiskLevel, getRiskConfig } from './RiskBadge';
 export default function PatientCard({ patient, onClick }) {
   const [expanded, setExpanded] = useState(false);
 
-  const riskScore = patient.risk_score || patient.framingham_score || 0;
-  const riskLevel = getRiskLevel(riskScore);
+  // Framingham score is 1-20, need to normalize for risk level calculation
+  const framinghamScore = patient.framingham_score || patient.risk_score || 0;
+  
+  // Convert Framingham score (1-20 range) to risk level
+  // Framingham: 1-4=low, 5-8=moderate, 9-12=high, 13+=critical
+  const getRiskLevelFromFramingham = (score) => {
+    if (score >= 13) return 'critical';
+    if (score >= 9) return 'high';
+    if (score >= 5) return 'moderate';
+    if (score >= 1) return 'low';
+    return 'minimal';
+  };
+  
+  const riskLevel = patient.risk_level || getRiskLevelFromFramingham(framinghamScore);
   const riskConfig = getRiskConfig(riskLevel);
 
   const vitalSigns = [
@@ -95,22 +107,22 @@ export default function PatientCard({ patient, onClick }) {
               </Typography>
             </Box>
           </Box>
-          <RiskBadge riskLevel={riskLevel} score={riskScore} size="small" />
+          <RiskBadge riskLevel={riskLevel} score={framinghamScore} showScore={false} size="small" />
         </Box>
 
-        {/* Risk Score Bar */}
+        {/* Framingham Risk Score */}
         <Box sx={{ mb: 2 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
             <Typography variant="caption" color="text.secondary">
-              Risk Score
+              Framingham Score
             </Typography>
             <Typography variant="caption" fontWeight={600} color={riskConfig.color}>
-              {(riskScore * 100).toFixed(1)}%
+              {framinghamScore.toFixed(0)} / 20
             </Typography>
           </Box>
           <LinearProgress
             variant="determinate"
-            value={riskScore * 100}
+            value={(framinghamScore / 20) * 100}
             sx={{
               height: 6,
               borderRadius: 3,
