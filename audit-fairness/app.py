@@ -2,8 +2,18 @@ import dash
 from dash import html, dcc
 from monitor import FairnessMonitor
 
+from flask import jsonify
+
 app = dash.Dash(__name__)
+server = app.server
 monitor = FairnessMonitor()
+
+@server.route('/health')
+def health():
+    return jsonify({
+        'status': 'UP',
+        'service': 'AuditFairness'
+    })
 
 def get_report_html():
     return monitor.generate_report()

@@ -29,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://localhost:8085/api/v1';
 
 const steps = [
   { label: 'Sync FHIR', endpoint: '/fhir/sync/bulk', icon: <Sync /> },

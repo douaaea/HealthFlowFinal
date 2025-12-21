@@ -1,10 +1,6 @@
 import axios from 'axios';
 
-// Direct service URLs - bypassing API gateway to avoid CORS issues
-const FEATURES_URL = 'http://localhost:5001';
-const PREDICTIONS_URL = 'http://localhost:5002';
-const DEID_URL = 'http://localhost:5000';
-const FHIR_URL = 'http://localhost:8081';
+// All requests go through API Gateway
 const GATEWAY_URL = 'http://localhost:8085';
 
 const createApi = (baseURL) => {
@@ -16,11 +12,8 @@ const createApi = (baseURL) => {
   return instance;
 };
 
-// Direct service connections (bypassing gateway for CORS-free access)
-const featuresApi = createApi(FEATURES_URL);
-const predictionsApi = createApi(PREDICTIONS_URL);
-const deidApi = createApi(DEID_URL);
-const fhirApi = createApi(FHIR_URL);
+// Gateway API instance
+const gatewayApi = createApi(GATEWAY_URL);
 
 // Simple cache implementation
 const cache = new Map();
@@ -43,59 +36,65 @@ export const clearCache = () => {
   cache.clear();
 };
 
-// Health checks for all services
+// Health checks for all services (direct checks for admin purposes)
+// Health checks for all services (routed via Gateway)
 export const checkAllServicesHealth = async () => {
   const services = [
-    { name: 'ProxyFHIR', port: 8081, path: '/api/v1/actuator/health' },
-    { name: 'DeID', port: 5000, path: '/health' },
-    { name: 'Featurizer', port: 5001, path: '/health' },
-    { name: 'ML-Predictor', port: 5002, path: '/health' },
-    { name: 'ScoreAPI', port: 5003, path: '/health' },
-    { name: 'API Gateway', port: 8085, path: '/health' },
+    { name: 'ProxyFHIR', path: '/api/v1/fhir/health', port: 8081 },
+    { name: 'DeID', path: '/api/v1/deid/health', port: 5000 },
+    { name: 'Featurizer', path: '/api/v1/features/health', port: 5001 },
+    { name: 'ML-Predictor', path: '/api/v1/predictions/health', port: 5002 },
+    { name: 'ScoreAPI', path: '/api/v1/scores/health', port: 5003 },
+    { name: 'AuditFairness', path: '/api/v1/audit/health', port: 5004 },
+    { name: 'API Gateway', path: '/health', port: 8085 },
   ];
 
   const healthChecks = await Promise.allSettled(
     services.map(async (service) => {
       try {
-        const response = await axios.get(`http://localhost:${service.port}${service.path}`, {
-          timeout: 5000,
+        // Use gatewayApi to benefit from valid baseURL and config
+        const response = await gatewayApi.get(service.path, {
+            timeout: 5000 
         });
         return {
           name: service.name,
-          port: service.port,
           status: 'healthy',
           details: response.data,
         };
       } catch (error) {
         return {
           name: service.name,
-          port: service.port,
           status: 'unhealthy',
           error: error.code === 'ECONNREFUSED'
-            ? 'Service not running'
-            : error.message,
+            ? 'Service not reachable via Gateway'
+            : (error.response?.statusText || error.message),
         };
       }
     })
   );
 
-  return healthChecks.map((result, index) => ({
-    ...services[index],
-    ...(result.status === 'fulfilled' ? result.value : {
-      status: 'error',
-      error: result.reason?.message || 'Unknown error'
-    }),
-  }));
+  return healthChecks.map((result, index) => {
+    const serviceInfo = services[index];
+    if (result.status === 'fulfilled') {
+      return { ...serviceInfo, ...result.value };
+    } else {
+      return {
+        ...serviceInfo,
+        status: 'error',
+        error: result.reason?.message || 'Unknown error'
+      };
+    }
+  });
 };
 
-// Features API - call featurizer service directly
+// ============ Features API (via Gateway) ============
 export const getFeatures = async () => {
   const cacheKey = 'features';
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
   try {
-    const response = await featuresApi.get('/api/v1/features');
+    const response = await gatewayApi.get('/api/v1/features/features');
     setCache(cacheKey, response.data);
     return response.data;
   } catch (error) {
@@ -110,7 +109,7 @@ export const getFeatureStats = async () => {
   if (cached) return cached;
 
   try {
-    const response = await featuresApi.get('/api/v1/stats');
+    const response = await gatewayApi.get('/api/v1/features/stats');
     setCache(cacheKey, response.data);
     return response.data;
   } catch (error) {
@@ -121,18 +120,18 @@ export const getFeatureStats = async () => {
 
 export const extractFeatures = async () => {
   clearCache();
-  const response = await featuresApi.post('/api/v1/extract/all');
+  const response = await gatewayApi.post('/api/v1/features/extract/all');
   return response.data;
 };
 
-// Predictions API - call ml-predictor service directly
+// ============ Predictions API (via Gateway) ============
 export const getPredictions = async () => {
   const cacheKey = 'predictions';
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
   try {
-    const response = await predictionsApi.get('/api/v1/predictions');
+    const response = await gatewayApi.get('/api/v1/predictions/predictions');
     setCache(cacheKey, response.data);
     return response.data;
   } catch (error) {
@@ -147,7 +146,7 @@ export const getPredictionStats = async () => {
   if (cached) return cached;
 
   try {
-    const response = await predictionsApi.get('/api/v1/stats');
+    const response = await gatewayApi.get('/api/v1/predictions/stats');
     setCache(cacheKey, response.data);
     return response.data;
   } catch (error) {
@@ -162,7 +161,7 @@ export const getHighRiskPatients = async () => {
   if (cached) return cached;
 
   try {
-    const response = await predictionsApi.get('/api/v1/high-risk');
+    const response = await gatewayApi.get('/api/v1/predictions/high-risk');
     setCache(cacheKey, response.data);
     return response.data;
   } catch (error) {
@@ -173,35 +172,56 @@ export const getHighRiskPatients = async () => {
 
 export const predictRisks = async () => {
   clearCache();
-  const response = await predictionsApi.post('/api/v1/predict/all');
+  const response = await gatewayApi.post('/api/v1/predictions/predict/all');
   return response.data;
 };
 
-// Get patient details
+// ============ Patient Details ============
 export const getPatientFeatures = async (patientId) => {
-  const response = await featuresApi.get(`/api/v1/features/${patientId}`);
+  const response = await gatewayApi.get(`/api/v1/features/features/${patientId}`);
   return response.data;
 };
 
 export const getPatientPrediction = async (patientId) => {
-  const response = await predictionsApi.get(`/api/v1/risk/${patientId}`);
+  const response = await gatewayApi.get(`/api/v1/predictions/risk/${patientId}`);
   return response.data;
 };
 
-// FHIR sync
+// ============ FHIR Sync (via Gateway) ============
 export const syncFhirData = async (count = 100) => {
   clearCache();
-  const response = await fhirApi.post(`/api/v1/sync/bulk?count=${count}`, {}, {
+  const response = await gatewayApi.post(`/api/v1/fhir/sync/bulk?count=${count}`, {}, {
     timeout: 600000, // 10 minutes for bulk sync
   });
   return response.data;
 };
 
-// Anonymization
+// ============ Anonymization (via Gateway) ============
 export const anonymizeData = async () => {
   clearCache();
-  const response = await deidApi.post('/api/v1/anonymize/all');
+  const response = await gatewayApi.post('/api/v1/deid/anonymize/all');
   return response.data;
 };
 
-export default featuresApi;
+// ============ Audit Fairness API (via Gateway) ============
+export const getAuditMetrics = async () => {
+  const cacheKey = 'auditMetrics';
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await gatewayApi.get('/api/v1/audit/metrics');
+    setCache(cacheKey, response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get audit metrics:', error);
+    throw error; // Let component handle fallback
+  }
+};
+
+export const generateFairnessReport = async () => {
+  const response = await gatewayApi.post('/api/v1/audit/report');
+  return response.data;
+};
+
+export default gatewayApi;

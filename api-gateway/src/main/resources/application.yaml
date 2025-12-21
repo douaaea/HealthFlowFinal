@@ -21,6 +21,9 @@ spring:
             allowedHeaders: "*"
             allowCredentials: false
 
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_LAST
+
       # Routes vers les microservices
       routes:
         # Route vers ProxyFHIR
@@ -61,7 +64,7 @@ spring:
           predicates:
             - Path=/api/v1/scores/**
           filters:
-            - RewritePath=/api/v1/scores/(?<segment>.*), /api/v1/scores/${segment}
+            - RewritePath=/api/v1/scores/(?<segment>.*), /${segment}
 
         # Route vers AuditFairness
         - id: audit-fairness-service
@@ -71,20 +74,16 @@ spring:
           filters:
             - RewritePath=/api/v1/audit/(?<segment>.*), /${segment}
 
-        # Route pour health check global
-        - id: gateway-health
-          uri: http://localhost:8080
-          predicates:
-            - Path=/health
-          filters:
-            - SetStatus=200
-
 # Configuration Actuator
 management:
   endpoints:
     web:
       exposure:
         include: health,info,gateway,metrics
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+        allowed-headers: "*"
   endpoint:
     health:
       show-details: always
