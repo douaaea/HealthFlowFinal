@@ -107,6 +107,49 @@ print(f"\n🩺 Colonnes de signes vitaux: {vital_cols}")
 
 
 # %%
+# CELL 7.5: Correlation Analysis
+print("\n🔗 === ANALYSE DE CORRÉLATION ===\n")
+
+# Calculate correlation matrix for numeric features
+numeric_df = df_raw.select_dtypes(include=[np.number])
+correlation_matrix = numeric_df.corr()
+
+# Plot correlation heatmap
+plt.figure(figsize=(20, 16))
+sns.heatmap(
+    correlation_matrix, 
+    annot=False,  # Don't show values (too many features)
+    cmap='coolwarm', 
+    center=0,
+    vmin=-1, 
+    vmax=1,
+    square=True,
+    linewidths=0.5,
+    cbar_kws={"shrink": 0.8}
+)
+plt.title('Correlation Matrix - All Features', fontsize=16, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# Show top correlations with target
+if TARGET_COL in correlation_matrix.columns:
+    target_corr = correlation_matrix[TARGET_COL].sort_values(ascending=False)
+    print(f"\n📊 Top 15 correlations with {TARGET_COL}:")
+    print(target_corr.head(15))
+    print(f"\n📊 Bottom 15 correlations with {TARGET_COL}:")
+    print(target_corr.tail(15))
+    
+    # Plot top correlations
+    plt.figure(figsize=(10, 8))
+    top_features = pd.concat([target_corr.head(15), target_corr.tail(15)]).drop(TARGET_COL)
+    top_features.sort_values().plot(kind='barh', color=['red' if x < 0 else 'green' for x in top_features])
+    plt.title(f'Top Features Correlated with {TARGET_COL}', fontsize=14, fontweight='bold')
+    plt.xlabel('Correlation Coefficient')
+    plt.tight_layout()
+    plt.show()
+
+
+# %%
 # CELL 8: Data Cleaning - Drop High-Null Columns
 print("🧹 === NETTOYAGE DES DONNÉES ===\n")
 
