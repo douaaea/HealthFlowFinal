@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # PostgreSQL Database
   postgres:
@@ -19,6 +21,7 @@ services:
 
   # ProxyFHIR Service (Java)
   proxy-fhir:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-proxy-fhir:${IMAGE_TAG:-latest}
     build:
       context: ./proxy-fhir
       dockerfile: Dockerfile
@@ -36,6 +39,7 @@ services:
 
   # DeID Service (Python)
   deid:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-deid:${IMAGE_TAG:-latest}
     build:
       context: ./deID
       dockerfile: Dockerfile
@@ -53,6 +57,7 @@ services:
 
   # Featurizer Service (Python)
   featurizer:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-featurizer:${IMAGE_TAG:-latest}
     build:
       context: ./featurizer
       dockerfile: Dockerfile
@@ -70,6 +75,7 @@ services:
 
   # ML Predictor Service (Python)
   ml-predictor:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-ml-predictor:${IMAGE_TAG:-latest}
     build:
       context: ./ml-predictor
       dockerfile: Dockerfile
@@ -81,15 +87,16 @@ services:
       PORT: 5002
       DB_HOST: postgres
       DB_PORT: 5432
-      XGBOOST_MODEL_PATH: /app/xgboost_readmission_model.json
+      XGBOOST_MODEL_PATH: /app/xgboost_readmission_pack_100k.joblib
     volumes:
-      - ./xgboost_readmission_model.json:/app/xgboost_readmission_model.json:ro
+      - ./xgboost_readmission_pack_100k.joblib:/app/xgboost_readmission_pack_100k.joblib:ro
     depends_on:
       postgres:
         condition: service_healthy
 
   # ScoreAPI Service (Python)
   score-api:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-score-api:${IMAGE_TAG:-latest}
     build:
       context: ./score-api
       dockerfile: Dockerfile
@@ -106,6 +113,7 @@ services:
 
   # AuditFairness Service
   audit-fairness:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-audit-fairness:${IMAGE_TAG:-latest}
     build:
       context: ./audit-fairness
       dockerfile: Dockerfile
@@ -121,6 +129,7 @@ services:
 
   # API Gateway (Java)
   api-gateway:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-api-gateway:${IMAGE_TAG:-latest}
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
@@ -143,6 +152,7 @@ services:
 
   # Dashboard Web (React)
   dashboard:
+    image: ${DOCKER_USERNAME:-taoufikjeta}/healthflow-dashboard-web:${IMAGE_TAG:-latest}
     build:
       context: ./dashboard-web
       dockerfile: Dockerfile
