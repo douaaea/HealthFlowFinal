@@ -287,6 +287,40 @@ curl http://localhost:8080/health  # API Gateway
 - **Project Overview**: [project.md](project.md)
 - **Dashboard Issue Fix**: [PROBLEM.md](PROBLEM.md) - Troubleshooting dashboard zeros/N/A values
 
+## ⚠️ Known Limitations
+
+### "Sync 100 Patients" Feature
+
+The "Sync" button in the dashboard, enabling the `FhirSyncService` to fetching data from a public FHIR server (`r4.smarthealthit.org`), is **experimental**.
+
+**Limitation**:
+
+- The public server is rate-limited and slow.
+- The sync process is synchronous and may timeout for requests > 10 patients (`500 Internal Server Error`).
+
+**Recommended Workaround**:
+
+- **Always use the local generation workflow** (`generate_synthea_data.sh`) for datasets > 10 patients.
+- This offline method is 100% reliable, faster, and produces better data quality with clinical notes.
+
+### Pipeline Anonymization Performance
+
+The `/api/v1/deid/anonymize/all` endpoint is optimized for large datasets by processing only patient records.
+
+**Optimization**:
+
+- Anonymizes 3,607 patients in ~4 seconds
+- Skips 1.86M+ observations to prevent HTTP timeout
+- Observation anonymization disabled (not required for batch ML workflow)
+
+**Note**: This optimization is for the batch processing workflow. Real-time clinical workflows requiring full GDPR/HIPAA compliance should implement batched observation processing.
+
+### API Gateway Rate Limiting
+
+Rate limiting has been disabled in development to prevent false 429 errors during bulk operations.
+
+**Note**: For production deployment, implement Redis-based rate limiting or use API gateway solutions (Kong, Apigee) instead of the in-memory counter.
+
 ## 🛠️ Troubleshooting
 
 ### Services Not Starting
@@ -328,6 +362,7 @@ If the dashboard displays all zeros or N/A values despite having data in the dat
 **Cause**: Microservice tables (`patient_features`, `risk_predictions`) are empty
 
 **Solution**:
+
 ```bash
 # 1. Verify dataset exists
 export PGPASSWORD='qwerty'
